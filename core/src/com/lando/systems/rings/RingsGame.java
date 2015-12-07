@@ -3,25 +3,34 @@ package com.lando.systems.rings;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
 public class RingsGame extends ApplicationAdapter implements GestureDetector.GestureListener {
-	PolygonSpriteBatch   polygonSpriteBatch;
-	Playfield            playfield;
-	OrthographicCamera   camera;
+	SpriteBatch        spriteBatch;
+	PolygonSpriteBatch polygonSpriteBatch;
+	Playfield          playfield;
+	OrthographicCamera camera;
+	BitmapFont         font;
+	GlyphLayout        layout;
 
 	@Override
 	public void create() {
+		spriteBatch = new SpriteBatch();
 		polygonSpriteBatch = new PolygonSpriteBatch();
 
-		final int   numSegments        = 8;
+		final int   numSegments        = 5;
 		final int   sectorNumDivisions = 20;
-		final float sectorAngleSize    = 90f;
+		final int   numSectors         = 8;
+		final float sectorAngleSize    = 360f / numSectors;
 		final float outerRadius        = 230f;
 		playfield = new Playfield(numSegments, sectorNumDivisions, sectorAngleSize, outerRadius);
 
@@ -29,6 +38,11 @@ public class RingsGame extends ApplicationAdapter implements GestureDetector.Ges
 		camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		camera.position.set(0, 0, 0);
 		camera.update();
+
+		font = new BitmapFont();
+		font.setColor(Color.BLACK);
+		layout = new GlyphLayout();
+		layout.setText(font, "Touched (0.0, 0.0)");
 
 		Gdx.input.setInputProcessor(new GestureDetector(this));
 	}
@@ -44,6 +58,11 @@ public class RingsGame extends ApplicationAdapter implements GestureDetector.Ges
 		}
 
 		playfield.update(Gdx.graphics.getDeltaTime());
+
+		layout.setText(font,
+		               "Sector #"  + playfield.lastSectorTouched + ", "
+		             + "Segment #" + playfield.lastSegmentTouched + " "
+		             + "Touched @(" + touchCoords.x + ", " + touchCoords.y + ")");
 	}
 
 	@Override
@@ -57,12 +76,18 @@ public class RingsGame extends ApplicationAdapter implements GestureDetector.Ges
 		polygonSpriteBatch.begin();
 		playfield.render(polygonSpriteBatch);
 		polygonSpriteBatch.end();
+
+		spriteBatch.begin();
+//		font.draw(spriteBatch, layout, Gdx.graphics.getWidth() / 2f - layout.width / 2f, layout.height + 10f);
+		spriteBatch.end();
 	}
 
 	@Override
 	public void dispose() {
+		font.dispose();
 		playfield.dispose();
 		polygonSpriteBatch.dispose();
+		spriteBatch.dispose();
 	}
 
 	// ------------------------------------------------------------------------
@@ -80,7 +105,11 @@ public class RingsGame extends ApplicationAdapter implements GestureDetector.Ges
 	public boolean tap(float x, float y, int count, int button) {
 		touchCoords.set(x, y, 0);
 		camera.unproject(touchCoords);
-		return playfield.handleTouch(touchCoords.x, touchCoords.y);
+		layout.setText(font,
+		               "Sector #"  + playfield.lastSectorTouched + ", "
+		             + "Segment #" + playfield.lastSegmentTouched + " "
+		             + "Touched @(" + touchCoords.x + ", " + touchCoords.y + ")");
+		return playfield.handleTouch(touchCoords.x, touchCoords.y, button);
 	}
 
 	@Override

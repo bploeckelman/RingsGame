@@ -32,6 +32,8 @@ public class Playfield implements Disposable {
     Texture textureBlue;
     Texture textureMagenta;
 
+    public enum DIR { CW, CCW };
+
     public Playfield(int numSegments, int sectorNumDivisions, float sectorAngleSize, float outerRadius) {
         this.numSegments = numSegments;
         this.sectorNumDivisions = sectorNumDivisions;
@@ -55,7 +57,7 @@ public class Playfield implements Disposable {
         }
     }
 
-    public boolean handleTouch(float x, float y) {
+    public boolean handleTouch(float x, float y, int pointer) {
         final float ox = 0;
         final float oy = 0;
         final float vx = ox - x;
@@ -70,15 +72,17 @@ public class Playfield implements Disposable {
         }
 
         // mid phase (is touch in sector i?)
-        for (Sector sector : sectors) {
+        for (int sectorIndex = 0; sectorIndex < sectors.size; ++sectorIndex) {
+            final Sector sector = sectors.get(sectorIndex);
             if (sector.handleTouch(x, y)) {
                 // narrow phase (is touch in segment within sector i?)
-                for (int i = 0; i < numSegments; ++i) {
-                    final float r0 = radiusInner + (i + 0) * radiusSegment;
-                    final float r1 = radiusInner + (i + 1) * radiusSegment;
+                for (int segmentIndex = 0; segmentIndex < numSegments; ++segmentIndex) {
+                    final float r0 = radiusInner + (segmentIndex + 0) * radiusSegment;
+                    final float r1 = radiusInner + (segmentIndex + 1) * radiusSegment;
                     if (r0 < length && length < r1) {
-                        // TODO: Hit the i-th segment... do something about it (move it to the neighboring sector)
-                        sector.segments.get(i).rotate(-sectorAngleSize);
+                        // Touched the i-th segment in this sector, do something about it
+                        final DIR direction = (pointer == 0) ? DIR.CCW : DIR.CW;
+                        rotateSegments(direction, segmentIndex, sectorIndex);
                         return true;
                     }
                 }
@@ -112,52 +116,63 @@ public class Playfield implements Disposable {
         final float radiusSegment = (outerRadius - radiusInner) / numSegments;
         final float thetaStep = sectorAngleSize / sectorNumDivisions;
 
-        // TODO: generate multiple sectors
-        final int sectorIndex = 0;
+        // Generate multiple sectors
+        final float playfieldAngleSize = 360f; // NOTE: will eventually be 360 (full circle)
+        final int numSectors = (int) Math.floor(playfieldAngleSize / sectorAngleSize);
+        float sectorStartTheta = 0f;
         segmentSprites = new Array<Array<PolygonSprite>>();
-        segmentSprites.add(new Array<PolygonSprite>());
+        for (int sectorIndex = 0; sectorIndex < numSectors; ++sectorIndex) {
+            segmentSprites.add(new Array<PolygonSprite>());
 
-        final Array<PolygonRegion> polygonRegions = new Array<PolygonRegion>();
-        for (int segment = 0; segment < numSegments; ++segment) {
-            float theta = 0f;
+            // Generate geometry for segments within this sector
+            final Array<PolygonRegion> polygonRegions = new Array<PolygonRegion>();
+            for (int segment = 0; segment < numSegments; ++segment) {
+//                float theta = sectorStartTheta;
+                float theta = 0f;
 
-            final FloatArray vertices = new FloatArray();
-            final ShortArray indices = new ShortArray();
-            for (short i = 0; i <= sectorNumDivisions; ++i) {
-                float di = radiusInner + segment * radiusSegment;
+                final FloatArray vertices = new FloatArray();
+                final ShortArray indices = new ShortArray();
+                for (short i = 0; i <= sectorNumDivisions; ++i) {
+                    float di = radiusInner + segment * radiusSegment;
 
-                float x1 = (di + 0 * radiusSegment) * MathUtils.cosDeg(theta);
-                float y1 = (di + 0 * radiusSegment) * MathUtils.sinDeg(theta);
-                float x2 = (di + 1 * radiusSegment) * MathUtils.cosDeg(theta);
-                float y2 = (di + 1 * radiusSegment) * MathUtils.sinDeg(theta);
-                vertices.addAll(x1, y1, x2, y2);
+                    float x1 = (di + 0 * radiusSegment) * MathUtils.cosDeg(theta);
+                    float y1 = (di + 0 * radiusSegment) * MathUtils.sinDeg(theta);
+                    float x2 = (di + 1 * radiusSegment) * MathUtils.cosDeg(theta);
+                    float y2 = (di + 1 * radiusSegment) * MathUtils.sinDeg(theta);
+                    vertices.addAll(x1, y1, x2, y2);
 
-                if (i < sectorNumDivisions) {
-                    short i0 = (short) (2 * i + 0);
-                    short i1 = (short) (2 * i + 1);
-                    short i2 = (short) (2 * i + 2);
-                    short i3 = (short) (2 * i + 3);
-                    indices.addAll(i0, i1, i3, i0, i3, i2);
+                    if (i < sectorNumDivisions) {
+                        short i0 = (short) (2 * i + 0);
+                        short i1 = (short) (2 * i + 1);
+                        short i2 = (short) (2 * i + 2);
+                        short i3 = (short) (2 * i + 3);
+                        indices.addAll(i0, i1, i3, i0, i3, i2);
+                    }
+
+                    theta += thetaStep;
                 }
 
-                theta += thetaStep;
+                final TextureRegion textureRegion;
+                final int randInt = MathUtils.random(3);
+                switch (randInt % 4) {
+//                switch (segment % 4) {
+                    default:
+                    case 0: textureRegion = new TextureRegion(textureRed);     break;
+                    case 1: textureRegion = new TextureRegion(textureGreen);   break;
+                    case 2: textureRegion = new TextureRegion(textureBlue);    break;
+                    case 3: textureRegion = new TextureRegion(textureMagenta); break;
+                }
+//                final EarClippingTriangulator triangulator = new EarClippingTriangulator();
+//                final ShortArray indices = triangulator.computeTriangles(vertices);
+                final PolygonRegion polygonRegion = new PolygonRegion(textureRegion, vertices.toArray(), indices.toArray());
+                final PolygonSprite polygonSprite = new PolygonSprite(polygonRegion);
+                polygonSprite.rotate(sectorStartTheta);
+
+                polygonRegions.add(polygonRegion);
+                segmentSprites.get(sectorIndex).add(polygonSprite);
             }
 
-            final TextureRegion textureRegion;
-            switch (segment % 4) {
-                default:
-                case 0: textureRegion = new TextureRegion(textureRed);     break;
-                case 1: textureRegion = new TextureRegion(textureGreen);   break;
-                case 2: textureRegion = new TextureRegion(textureBlue);    break;
-                case 3: textureRegion = new TextureRegion(textureMagenta); break;
-            }
-//            final EarClippingTriangulator triangulator = new EarClippingTriangulator();
-//            final ShortArray indices = triangulator.computeTriangles(vertices);
-            final PolygonRegion polygonRegion = new PolygonRegion(textureRegion, vertices.toArray(), indices.toArray());
-            final PolygonSprite polygonSprite = new PolygonSprite(polygonRegion);
-
-            polygonRegions.add(polygonRegion);
-            segmentSprites.get(sectorIndex).add(polygonSprite);
+            sectorStartTheta += sectorAngleSize;
         }
     }
 
@@ -166,6 +181,38 @@ public class Playfield implements Disposable {
         sectors = new Array<Sector>();
         for (Array<PolygonSprite> sectorSprites : segmentSprites) {
             sectors.add(new Sector(sectorSprites, theta, theta += sectorAngleSize));
+        }
+    }
+
+
+    public int lastSectorTouched = -1;
+    public int lastSegmentTouched = -1;
+
+    private void rotateSegments(DIR dir, int segmentIndex, int sectorIndex) {
+        lastSectorTouched = sectorIndex;
+        lastSegmentTouched = segmentIndex;
+
+        if (dir == DIR.CCW) {
+            final PolygonSprite lastSegment = sectors.get(sectors.size - 1).segments.get(segmentIndex);
+            for (int i = sectors.size - 1; i >= 1; --i) {
+                sectors.get(i).segments.set(segmentIndex,
+                                            sectors.get(i - 1).segments.get(segmentIndex)
+                                           );
+                sectors.get(i).segments.get(segmentIndex).rotate(sectorAngleSize);
+            }
+            sectors.get(0).segments.set(segmentIndex, lastSegment);
+            sectors.get(0).segments.get(segmentIndex).rotate(sectorAngleSize);
+        }
+        else if (dir == DIR.CW) {
+            final PolygonSprite firstSegment = sectors.get(0).segments.get(segmentIndex);
+            for (int i = 0; i < sectors.size - 1; ++i) {
+                sectors.get(i).segments.set(segmentIndex,
+                    sectors.get(i + 1).segments.get(segmentIndex)
+                );
+                sectors.get(i).segments.get(segmentIndex).rotate(-sectorAngleSize);
+            }
+            sectors.get(sectors.size - 1).segments.set(segmentIndex, firstSegment);
+            sectors.get(sectors.size - 1).segments.get(segmentIndex).rotate(-sectorAngleSize);
         }
     }
 
