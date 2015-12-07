@@ -22,7 +22,8 @@ public class Sector {
 
     public boolean handleTouch(float x, float y) {
         final float theta = MathUtils.atan2(y, x) * MathUtils.radiansToDegrees;
-        return (minAngle <= theta && theta <= maxAngle);
+        final float angle = (theta + 360f) % 360; // convert theta from [-180,0,180] to [0,359]
+        return (minAngle <= angle && angle <= maxAngle);
     }
 
 }
