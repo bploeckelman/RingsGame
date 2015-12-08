@@ -124,8 +124,8 @@ public class RingsGame extends ApplicationAdapter implements GestureDetector.Ges
 
 	@Override
 	public boolean pan(float x, float y, float deltaX, float deltaY) {
-		camera.translate(-deltaX, deltaY);
-		camera.update();
+//		camera.translate(-deltaX, deltaY);
+//		camera.update();
 		return true;
 	}
 
