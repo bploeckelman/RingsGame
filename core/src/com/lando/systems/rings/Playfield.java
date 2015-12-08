@@ -32,6 +32,8 @@ public class Playfield implements Disposable {
     Texture textureBlue;
     Texture textureMagenta;
 
+    public int numSectorsFilled;
+
     public enum DIR { CW, CCW };
 
     public Playfield(int numSegments, int sectorNumDivisions, float sectorAngleSize, float outerRadius) {
@@ -40,6 +42,7 @@ public class Playfield implements Disposable {
         this.sectorAngleSize = sectorAngleSize;
         this.outerRadius = outerRadius;
         this.touchVec = new Vector2();
+        this.numSectorsFilled = 0;
 
         generateSegments();
         generateSectors();
@@ -83,6 +86,7 @@ public class Playfield implements Disposable {
                         // Touched the i-th segment in this sector, do something about it
                         final DIR direction = (pointer == 0) ? DIR.CCW : DIR.CW;
                         rotateSegments(direction, segmentIndex, sectorIndex);
+                        checkForFilledSectors();
                         return true;
                     }
                 }
@@ -213,6 +217,40 @@ public class Playfield implements Disposable {
             }
             sectors.get(sectors.size - 1).segments.set(segmentIndex, firstSegment);
             sectors.get(sectors.size - 1).segments.get(segmentIndex).rotate(-sectorAngleSize);
+        }
+    }
+
+    private void checkForFilledSectors() {
+        for (Sector sector : sectors) {
+            boolean isFilled = true;
+
+            final Texture texture = sector.segments.get(0).getRegion().getRegion().getTexture();
+            for (int i = 1; i < numSegments; ++i) {
+                if (texture != sector.segments.get(i).getRegion().getRegion().getTexture()) {
+                    isFilled = false;
+                    break;
+                }
+            }
+
+            if (isFilled) handleFilledSector(sector);
+        }
+    }
+
+    private void handleFilledSector(Sector sector) {
+        for (PolygonSprite segment : sector.segments) {
+            segment.getRegion().getRegion().setRegion(new TextureRegion(getRandomColor()));
+        }
+        ++numSectorsFilled;
+    }
+
+    private Texture getRandomColor() {
+        int r = MathUtils.random(0, 3);
+        switch (r) {
+            default:
+            case 0: return textureRed;
+            case 1: return textureGreen;
+            case 2: return textureBlue;
+            case 3: return textureMagenta;
         }
     }
 
