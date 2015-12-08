@@ -41,6 +41,7 @@ public class RingsGame extends ApplicationAdapter implements GestureDetector.Ges
 
 		font = new BitmapFont();
 		font.setColor(Color.BLACK);
+		font.getData().setScale(3f);
 		layout = new GlyphLayout();
 		layout.setText(font, "Touched (0.0, 0.0)");
 
@@ -59,10 +60,11 @@ public class RingsGame extends ApplicationAdapter implements GestureDetector.Ges
 
 		playfield.update(Gdx.graphics.getDeltaTime());
 
-		layout.setText(font,
-		               "Sector #"  + playfield.lastSectorTouched + ", "
-		             + "Segment #" + playfield.lastSegmentTouched + " "
-		             + "Touched @(" + touchCoords.x + ", " + touchCoords.y + ")");
+//		layout.setText(font,
+//		               "Sector #"  + playfield.lastSectorTouched + ", "
+//		             + "Segment #" + playfield.lastSegmentTouched + " "
+//		             + "Touched @(" + touchCoords.x + ", " + touchCoords.y + ")");
+		layout.setText(font, "Sectors filled: " + playfield.numSectorsFilled);
 	}
 
 	@Override
@@ -78,7 +80,7 @@ public class RingsGame extends ApplicationAdapter implements GestureDetector.Ges
 		polygonSpriteBatch.end();
 
 		spriteBatch.begin();
-//		font.draw(spriteBatch, layout, Gdx.graphics.getWidth() / 2f - layout.width / 2f, layout.height + 10f);
+		font.draw(spriteBatch, layout, Gdx.graphics.getWidth() / 2f - layout.width / 2f, layout.height + 10f);
 		spriteBatch.end();
 	}
 
