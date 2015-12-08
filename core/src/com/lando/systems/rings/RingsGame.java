@@ -31,7 +31,7 @@ public class RingsGame extends ApplicationAdapter implements GestureDetector.Ges
 		final int   sectorNumDivisions = 20;
 		final int   numSectors         = 8;
 		final float sectorAngleSize    = 360f / numSectors;
-		final float outerRadius        = 230f;
+		final float outerRadius        = Gdx.graphics.getHeight() / 2f - 20f;
 		playfield = new Playfield(numSegments, sectorNumDivisions, sectorAngleSize, outerRadius);
 
 		camera = new OrthographicCamera();
